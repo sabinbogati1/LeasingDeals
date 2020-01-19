@@ -57,29 +57,19 @@ class App extends Component {
   };
 
   _handleEngineType = async () => {
-    const {engineType, globalCarsDetail} = this.state;
-    // let allCarsDetail = await this.getAllCarDetails();
-    let allCarsDetail = globalCarsDetail;
-    let filterCarsDetail; 
-    if(!engineType){
-      filterCarsDetail = allCarsDetail.filter(carDetails => {
-        return carDetails.engine_type === "Diesel"
-      })
-    }else{
-      filterCarsDetail = allCarsDetail.filter(carDetails => {
-        return carDetails.engine_type !== "Diesel"
-      })
-    }
-    
+    const {engineType, value, transManual, transAutomatic  } = this.state;
+    let filterCarsDetail = await this.filter(transManual,transAutomatic,!engineType, value  );
+    const currentCarsDetail = filterCarsDetail.slice(0, 20);
     this.setState({
       engineType: !engineType,
-      allCarsDetail: filterCarsDetail
+      allCarsDetail: filterCarsDetail,
+      currentCarsDetail
     });
   }
 
   _handleTransManual = async ()=>{
-    const {transManual, transAutomatic} = this.state;
-   let filterCarDetails = await this.filterTransmission(!transManual, transAutomatic);
+    const {transManual, transAutomatic, engineType, value} = this.state;
+   let filterCarDetails = await this.filter(!transManual,transAutomatic,engineType, value  );
    const currentCarsDetail = filterCarDetails.slice(0, 20);
    this.setState({
      transManual: !transManual,
@@ -89,8 +79,8 @@ class App extends Component {
   }
 
   _handleTransAutomatic = async() =>{
-    const {transManual,transAutomatic} = this.state;
-    let filterCarDetails = await this.filterTransmission(transManual, !transAutomatic);
+    const {transManual, transAutomatic, engineType, value} = this.state;
+   let filterCarDetails = await this.filter(transManual,!transAutomatic,engineType, value  );
     const currentCarsDetail = filterCarDetails.slice(0, 20);
     this.setState({
       transAutomatic: !transAutomatic,
@@ -99,43 +89,49 @@ class App extends Component {
     })
   }
 
-  filterTransmission= async (manualStatus, autoStatus) =>{
+  filter= async (manualStatus, autoStatus, engine_type, range_val) =>{
     const {globalCarsDetail} = this.state;
-    // let allCarsDetail = await this.getAllCarDetails();
     let allCarsDetail = globalCarsDetail;
+    const engineType = engine_type ? "Diesel" : null;
+    const {min, max} = range_val;
     let filterCarsDetail;
 
     if(manualStatus && autoStatus){
       filterCarsDetail = allCarsDetail.filter(carDetails => {
-        return carDetails.transmission === "Manual" ||  carDetails.transmission === "Automatic" ;
+        return ((carDetails.transmission === "Manual" ||  carDetails.transmission === "Automatic") &&
+         carDetails.engine_type === engineType &&  
+         carDetails.monthly_rental >= min && carDetails.monthly_rental <= max
+         ) ;
       })
 
     } else if(!manualStatus && autoStatus){
       filterCarsDetail = allCarsDetail.filter(carDetails => {
-        return carDetails.transmission !== "Manual" ||  carDetails.transmission === "Automatic" ;
+        return ((carDetails.transmission !== "Manual" ||  carDetails.transmission === "Automatic") &&
+        carDetails.engine_type === engineType &&  
+        carDetails.monthly_rental >= min && carDetails.monthly_rental <= max) ;
       })
     } else if(manualStatus && !autoStatus){
       filterCarsDetail = allCarsDetail.filter(carDetails => {
-        return carDetails.transmission === "Manual" ||  carDetails.transmission !== "Automatic" ;
+        return ((carDetails.transmission === "Manual" ||  carDetails.transmission !== "Automatic")&&
+        carDetails.engine_type === engineType &&  
+        carDetails.monthly_rental >= min && carDetails.monthly_rental <= max) ;
       })
     } else {
       filterCarsDetail = allCarsDetail.filter(carDetails => {
-        return carDetails.transmission !== "Manual" &&  carDetails.transmission !== "Automatic" ;
+        return ((carDetails.transmission !== "Manual" &&  carDetails.transmission !== "Automatic")&&
+        carDetails.engine_type === engineType &&  
+        carDetails.monthly_rental >= min && carDetails.monthly_rental <= max) ;
       })
     }
   return filterCarsDetail;
   }
 
   _handleMonthlyRental = async(val) =>{
-    const {globalCarsDetail} = this.state;
-    // let allCarsDetail = await this.getAllCarDetails();
-    let allCarsDetail = globalCarsDetail;
-    let filterCarsDetails = allCarsDetail.filter(carDetail => {
-      return carDetail.monthly_rental >= val.min && carDetail.monthly_rental <= val.max
-    })
-    const currentCarsDetail = filterCarsDetails.slice(0, 20);
+    const {transManual, transAutomatic, engineType} = this.state;
+    let filterCarDetails = await this.filter(transManual,transAutomatic,engineType, val  );
+    const currentCarsDetail = filterCarDetails.slice(0, 20);
     this.setState({
-      allCarsDetail: filterCarsDetails,
+      allCarsDetail: filterCarDetails,
       currentCarsDetail
     })
   }
@@ -150,9 +146,9 @@ class App extends Component {
       currentCarsDetail,
       currentPage,
       totalPages,
-      loading
+      loading,
     } = this.state;
-    const totalCarsDetails = allCarsDetail.length;
+    const totalCarsDetails = allCarsDetail?  allCarsDetail.length : 0;
 
     if(loading){
       return <Spinner/>
